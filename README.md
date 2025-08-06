@@ -6,7 +6,7 @@ A modern, AI-powered portfolio generator that creates stunning portfolios from r
 
 ## 🔗 Live Demo
 
-👉 [View Live Project](https://auto-folio-xebia-internship-project-group-m-6ngn-mu29vq5rm.vercel.app/)
+👉 [View Live Project](https://autofolioporfoliogenerator.netlify.app/)
 
 
 ## 🚀 Features
