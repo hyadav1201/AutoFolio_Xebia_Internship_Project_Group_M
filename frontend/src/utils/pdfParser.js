@@ -5,8 +5,13 @@
 
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Set up the worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
+// Set up the worker - using bundled worker for reliability and security
+// The worker is bundled with pdfjs-dist package
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  /* @vite-ignore */
+  import.meta.url
+).toString();
 
 /**
  * Extract text from PDF file using PDF.js
@@ -67,11 +72,17 @@ export function parseResumeText(text) {
     extractedData.emails = [...new Set(emails)]; // Remove duplicates
   }
 
-  // Extract phone numbers (various formats)
-  const phoneRegex = /(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g;
+  // Extract phone numbers (international formats supported)
+  // Matches formats: +1-234-567-8900, (123) 456-7890, +44 20 1234 5678, etc.
+  const phoneRegex = /(\+?\d{1,4}[-.\s]?)?(\(?\d{1,4}\)?[-.\s]?)?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,9}/g;
   const phones = text.match(phoneRegex);
   if (phones && phones.length > 0) {
-    extractedData.phoneNumbers = [...new Set(phones.map(p => p.trim()))];
+    // Filter to keep only likely phone numbers (at least 10 digits)
+    const validPhones = phones.filter(p => {
+      const digits = p.replace(/\D/g, '');
+      return digits.length >= 10 && digits.length <= 15;
+    });
+    extractedData.phoneNumbers = [...new Set(validPhones.map(p => p.trim()))];
   }
 
   // Extract LinkedIn URL

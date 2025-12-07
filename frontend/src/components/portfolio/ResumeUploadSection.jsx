@@ -51,8 +51,8 @@ export function ResumeUploadSection({ onResumeProcessed }) {
       const data = await res.json()
       setUploadedFilePath(data.filePath)
       
-      // Check if server-side parsing failed or Affinda is down
-      if (data.useClientSideParsing || data.affindaError) {
+      // Check if server-side parsing failed or Affinda is down (standardized response)
+      if (data.useClientSideParsing || data.parsingMethod === 'client') {
         console.warn('Server-side parsing unavailable, using client-side fallback')
         
         // Use client-side parsing
