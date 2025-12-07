@@ -254,25 +254,38 @@ export default function CreatePortfolioPage() {
     // Extract social media URLs from websites array
     const websites = Array.isArray(extractedData.websites) ? extractedData.websites : [];
     
-    // Extract and cache URL findings to avoid repeated iterations
+    // Helper function to safely check if a URL belongs to a specific domain
+    const isFromDomain = (url, domain) => {
+      try {
+        const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`);
+        return urlObj.hostname === domain || urlObj.hostname.endsWith(`.${domain}`);
+      } catch {
+        // Fallback for non-URL strings - use stricter pattern matching
+        const domainPattern = new RegExp(`^(?:https?://)?(?:www\\.)?${domain.replace('.', '\\.')}`);
+        return domainPattern.test(url);
+      }
+    };
+    
+    // Extract and cache URL findings to avoid repeated iterations with secure domain checking
     const linkedinUrl = extractedData.linkedin || 
-      websites.find(url => url && url.includes('linkedin.com')) || '';
+      websites.find(url => url && isFromDomain(url, 'linkedin.com')) || '';
     const githubUrl = extractedData.github || 
-      websites.find(url => url && url.includes('github.com')) || '';
+      websites.find(url => url && isFromDomain(url, 'github.com')) || '';
     const twitterUrl = extractedData.twitter || 
-      websites.find(url => url && (url.includes('twitter.com') || url.includes('x.com'))) || '';
+      websites.find(url => url && (isFromDomain(url, 'twitter.com') || isFromDomain(url, 'x.com'))) || '';
     // Match blog URLs more specifically to avoid false positives
     const blogUrl = extractedData.blog || 
       websites.find(url => url && (
-        url.includes('medium.com') || 
-        url.includes('dev.to') || 
-        url.includes('hashnode') ||
-        url.match(/\/(blog|posts?)\b/i)
+        isFromDomain(url, 'medium.com') || 
+        isFromDomain(url, 'dev.to') || 
+        isFromDomain(url, 'hashnode.dev') ||
+        isFromDomain(url, 'hashnode.com') ||
+        url.match(/^(?:https?:\/\/)?[^/]+\/(blog|posts?)\b/i)
       )) || '';
     const whatsappUrl = extractedData.whatsapp || 
-      websites.find(url => url && url.includes('wa.me')) || '';
+      websites.find(url => url && isFromDomain(url, 'wa.me')) || '';
     const telegramUrl = extractedData.telegram || 
-      websites.find(url => url && url.includes('t.me')) || '';
+      websites.find(url => url && isFromDomain(url, 't.me')) || '';
     
     // Process projects once and reuse
     const extractedProjects = mapProjects(extractedData);
