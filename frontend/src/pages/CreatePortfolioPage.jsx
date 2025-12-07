@@ -235,23 +235,53 @@ export default function CreatePortfolioPage() {
     // Log the full Affinda response for mapping
     
     // Map as many fields as possible from extractedData (except About Me)
+    // Extract current role from profession or latest work experience
+    const currentRole = extractedData.profession || 
+      (Array.isArray(extractedData.workExperience) && extractedData.workExperience.length > 0
+        ? extractedData.workExperience[0]?.jobTitle
+        : null) || '';
+    
+    // Extract location from various possible fields
+    const location = extractedData.location?.formatted || 
+      extractedData.location?.city || 
+      extractedData.location || '';
+    
+    // Generate short bio from summary or objective
+    const shortBio = extractedData.summary || 
+      extractedData.objective || 
+      extractedData.tagline || '';
+    
+    // Extract social media URLs from websites array
+    const websites = Array.isArray(extractedData.websites) ? extractedData.websites : [];
+    const twitterUrl = extractedData.twitter || 
+      websites.find(url => url && (url.includes('twitter.com') || url.includes('x.com'))) || '';
+    const blogUrl = extractedData.blog || 
+      websites.find(url => url && (url.includes('medium.com') || url.includes('dev.to') || url.includes('blog'))) || '';
+    const whatsappUrl = extractedData.whatsapp || 
+      websites.find(url => url && url.includes('wa.me')) || '';
+    const telegramUrl = extractedData.telegram || 
+      websites.find(url => url && url.includes('t.me')) || '';
+    
     setPortfolioData((prev) => ({
       ...prev,
       fullName: extractedData.name?.raw || extractedData.fullName || prev.fullName,
+      currentRole: currentRole || prev.currentRole,
+      location: location || prev.location,
+      shortBio: shortBio || prev.shortBio,
       email: extractedData.emails?.[0] || extractedData.email || prev.email,
       phone: extractedData.phoneNumbers?.[0] || extractedData.phone || prev.phone,
       linkedinUrl:
         extractedData.linkedin ||
-        (Array.isArray(extractedData.websites)
-          ? extractedData.websites.find(url => url.includes('linkedin.com'))
-          : undefined) ||
+        websites.find(url => url && url.includes('linkedin.com')) ||
         prev.linkedinUrl,
       githubUrl:
         extractedData.github ||
-        (Array.isArray(extractedData.websites)
-          ? extractedData.websites.find(url => url.includes('github.com'))
-          : undefined) ||
+        websites.find(url => url && url.includes('github.com')) ||
         prev.githubUrl,
+      twitterUrl: twitterUrl || prev.twitterUrl,
+      blogUrl: blogUrl || prev.blogUrl,
+      whatsappUrl: whatsappUrl || prev.whatsappUrl,
+      telegramUrl: telegramUrl || prev.telegramUrl,
       education:
         Array.isArray(extractedData.education)
           ? extractedData.education.map(edu => ({
@@ -279,7 +309,30 @@ export default function CreatePortfolioPage() {
       certifications: mapCertifications(extractedData.certifications),
       careerGoals: extractedData.careerGoals || prev.careerGoals,
       // About Me will be handled separately
-      extractedFromResume: new Set(Object.keys(extractedData)),
+      // Track which fields were actually extracted and populated
+      extractedFromResume: new Set([
+        ...(extractedData.name?.raw || extractedData.fullName ? ['fullName'] : []),
+        ...(currentRole ? ['currentRole'] : []),
+        ...(location ? ['location'] : []),
+        ...(shortBio ? ['shortBio'] : []),
+        ...(extractedData.emails?.[0] || extractedData.email ? ['email'] : []),
+        ...(extractedData.phoneNumbers?.[0] || extractedData.phone ? ['phone'] : []),
+        ...(extractedData.linkedin || websites.find(url => url && url.includes('linkedin.com')) ? ['linkedinUrl'] : []),
+        ...(extractedData.github || websites.find(url => url && url.includes('github.com')) ? ['githubUrl'] : []),
+        ...(twitterUrl ? ['twitterUrl'] : []),
+        ...(blogUrl ? ['blogUrl'] : []),
+        ...(whatsappUrl ? ['whatsappUrl'] : []),
+        ...(telegramUrl ? ['telegramUrl'] : []),
+        ...(Array.isArray(extractedData.education) && extractedData.education.length > 0 ? ['education'] : []),
+        ...(extractedData.workExperience || extractedData.experience ? ['experience'] : []),
+        ...(Array.isArray(extractedData.skills) && extractedData.skills.length > 0 ? ['technicalSkills'] : []),
+        ...(extractedData.softSkills ? ['softSkills'] : []),
+        ...(extractedData.toolsAndTech ? ['toolsAndTech'] : []),
+        ...(mapProjects(extractedData).length > 0 ? ['projects'] : []),
+        ...(extractedData.awards ? ['awards'] : []),
+        ...(extractedData.certifications ? ['certifications'] : []),
+        ...(extractedData.careerGoals ? ['careerGoals'] : []),
+      ]),
     }))
     
     // Update progress after populating fields
@@ -364,7 +417,7 @@ export default function CreatePortfolioPage() {
     }
 
     const missingFields = Object.entries(requiredFields)
-      .filter(([key, value]) => !value)
+      .filter(([, value]) => !value)
       .map(([key]) => key)
 
     if (missingFields.length > 0) {
