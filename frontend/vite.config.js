@@ -17,5 +17,6 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: false,
+    target: 'esnext', // Support top-level await for pdfjs-dist 4.x
   },
 })
