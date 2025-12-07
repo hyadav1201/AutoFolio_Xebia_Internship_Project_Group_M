@@ -18,23 +18,27 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        const userRes = await fetch(API_ENDPOINTS.ME, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        // Optimized: Fetch both user and subscription in parallel
+        const [userRes, subRes] = await Promise.all([
+          fetch(API_ENDPOINTS.ME, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(API_ENDPOINTS.USER_SUBSCRIPTION, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
 
         if (!userRes.ok) throw new Error("Failed to fetch user");
 
         const userData = await userRes.json();
         setUser(userData);
 
-        const subRes = await fetch(API_ENDPOINTS.USER_SUBSCRIPTION, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!subRes.ok) throw new Error("Failed to fetch subscription");
-
-        const { subscription } = await subRes.json();
-        setSubscription(subscription);
+        let subscription = null;
+        if (subRes.ok) {
+          const subData = await subRes.json();
+          subscription = subData.subscription;
+          setSubscription(subscription);
+        }
 
         const isActive = subscription?.status === "active";
         localStorage.setItem("hasPaid", isActive ? "true" : "false");
@@ -110,22 +114,31 @@ export function AuthProvider({ children }) {
       localStorage.setItem("token", data.token);
       setUser(data.user);
 
-      // Fetch subscription
-      const subRes = await fetch(API_ENDPOINTS.USER_SUBSCRIPTION, {
-        headers: { Authorization: `Bearer ${data.token}` },
-      });
-
-      let subData = null;
-      if (subRes.ok) {
-        const { subscription } = await subRes.json();
-        setSubscription(subscription);
-        subData = subscription;
-      } else {
-        setSubscription(null);
-      }
-
-      const finalIsActive = subData?.status === "active" || isActive;
+      // Optimized: Fetch subscription in parallel with setting state, don't block response
+      const finalIsActive = data.user?.subscription === 'active' || isActive;
       localStorage.setItem("hasPaid", finalIsActive ? "true" : "false");
+
+      // Fetch subscription asynchronously without blocking
+      fetch(API_ENDPOINTS.USER_SUBSCRIPTION, {
+        headers: { Authorization: `Bearer ${data.token}` },
+      })
+        .then(subRes => {
+          if (subRes.ok) {
+            return subRes.json();
+          }
+          return null;
+        })
+        .then(subData => {
+          if (subData?.subscription) {
+            setSubscription(subData.subscription);
+            const updatedIsActive = subData.subscription?.status === "active";
+            localStorage.setItem("hasPaid", updatedIsActive ? "true" : "false");
+          }
+        })
+        .catch(err => {
+          console.warn("Subscription fetch error (non-blocking):", err);
+          setSubscription(null);
+        });
 
       return {
         success: true,

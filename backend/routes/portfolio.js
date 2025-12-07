@@ -95,11 +95,26 @@ router.post('/upload-resume', upload.single('resume'), async (req, res) => {
     return res.status(400).json({ error: 'No file uploaded or invalid file type' });
   }
   try {
-    // Call Affinda API
+    // Try Affinda API first
     const affindaData = await extractWithAffinda(req.file.path);
+    
+    // Check if Affinda API failed
+    if (affindaData.error) {
+      console.warn('Affinda API failed, using fallback message:', affindaData.error);
+      // Return minimal data and let client handle parsing
+      return res.json({ 
+        filePath: `/uploads/${req.file.filename}`,
+        extractedDetails: {},
+        affindaError: affindaData.error,
+        useClientSideParsing: true,
+        message: 'Server-side parsing unavailable. Please use client-side parsing or enter data manually.'
+      });
+    }
+    
     const extracted = affindaData.data || {};
     let aboutMe = extracted.summary || extracted.objective || extracted.aboutMe || "";
     let huggingFaceError = null;
+    
     // If About Me is missing, try to generate it using Cohere
     if (!aboutMe) {
       // Build a focused prompt for Cohere
@@ -131,8 +146,14 @@ router.post('/upload-resume', upload.single('resume'), async (req, res) => {
     // Add aboutMe to the extracted details
     extracted.aboutMe = aboutMe;
     // Send all extracted fields, and a warning if Cohere failed
-    res.json({ filePath: `/uploads/${req.file.filename}`, extractedDetails: extracted, affindaRaw: affindaData, huggingFaceError });
+    res.json({ 
+      filePath: `/uploads/${req.file.filename}`, 
+      extractedDetails: extracted, 
+      affindaRaw: affindaData, 
+      huggingFaceError 
+    });
   } catch (err) {
+    console.error('Resume upload error:', err);
     res.status(500).json({ error: 'Failed to process resume', details: err.message });
   }
 });
