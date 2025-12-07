@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { Button } from "../components/ui/button"
 import { Card, CardContent } from "../components/ui/card"
@@ -27,6 +27,9 @@ export default function CreatePortfolioPage() {
   const [step, setStep] = useState(1)
   const [dataSource, setDataSource] = useState(null) // 'resume' or 'manual'
   const [autoOpenFilePicker, setAutoOpenFilePicker] = useState(false)
+  const [isProcessingResume, setIsProcessingResume] = useState(false)
+  const [processingProgress, setProcessingProgress] = useState(0)
+  const [processingStatus, setProcessingStatus] = useState("")
   const [portfolioData, setPortfolioData] = useState({
     // Personal Info
     fullName: "",
@@ -197,9 +200,9 @@ export default function CreatePortfolioPage() {
           // Try to extract name, tech, and description
           const nameMatch = line.match(/^[^\n]+/);
           const name = nameMatch ? nameMatch[0].split('\n')[0] : '';
-          // Try to extract tech stack (comma or | separated)
-          const techMatch = line.match(/([A-Za-z0-9\-\.]+,? ?)+(?=\n|\|)/);
-          const tech = techMatch ? techMatch[0].split(/,|\|/).map(t => t.trim()).filter(Boolean) : [];
+          // Try to extract tech stack (comma or | separated) - simplified regex to avoid ReDoS
+          const techMatch = line.match(/[A-Za-z0-9\-., ]+(?=\n|\|)/);
+          const tech = techMatch ? techMatch[0].split(/[,|]/).map(t => t.trim()).filter(Boolean) : [];
           // Description: everything after the first line
           const desc = line.split('\n').slice(1).join(' ').trim();
           return { name, tech, description: desc };
@@ -209,7 +212,26 @@ export default function CreatePortfolioPage() {
     return [];
   };
 
-  const handleResumeProcessed = (extractedData, huggingFaceError) => {
+  const handleResumeProcessingError = (error) => {
+    // Reset processing state
+    setIsProcessingResume(false);
+    setProcessingProgress(0);
+    setProcessingStatus("");
+    
+    toast({
+      title: "Resume Processing Failed",
+      description: error || "Failed to process resume. You can retry or enter information manually.",
+      variant: "destructive",
+      duration: 5000,
+    })
+  }
+
+  const handleResumeProcessed = async (extractedData, huggingFaceError) => {
+    // Set initial processing state
+    setIsProcessingResume(true);
+    setProcessingProgress(50);
+    setProcessingStatus("Populating form fields...");
+    
     // Log the full Affinda response for mapping
     
     // Map as many fields as possible from extractedData (except About Me)
@@ -259,36 +281,66 @@ export default function CreatePortfolioPage() {
       // About Me will be handled separately
       extractedFromResume: new Set(Object.keys(extractedData)),
     }))
+    
+    // Update progress after populating fields
+    setProcessingProgress(70);
+    setProcessingStatus("Generating personalized About Me section...");
     setIsAboutMeLoading(true);
-    // Trigger About Me generation as a separate async step
-            fetch(API_ENDPOINTS.PORTFOLIO_GENERATE_ABOUT_ME, {
+    
+    // Trigger About Me generation as a separate async step with timeout
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('About Me generation timeout')), 30000)
+    );
+    
+    const fetchPromise = fetch(API_ENDPOINTS.PORTFOLIO_GENERATE_ABOUT_ME, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ extractedData }),
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to generate About Me');
+        return res.json();
+      })
       .then(data => {
         setPortfolioData(prev => ({ ...prev, aboutMe: data.aboutMe || prev.aboutMe }));
-      })
-      .catch(() => {
-        // fallback: do nothing, About Me remains empty
-      })
-      .finally(() => setIsAboutMeLoading(false));
-    if (huggingFaceError) {
-      toast({
-        title: "AI Generation Warning",
-        description: `Some AI-generated fields may be missing: ${huggingFaceError}`,
-        variant: "destructive",
-        duration: 6000,
-      })
-    } else {
-      toast({
-        title: "Resume processed successfully!",
-        description: "Your information has been extracted. You can review and edit it.",
-        duration: 3000,
-      })
+        setProcessingProgress(100);
+        setProcessingStatus("Processing complete!");
+      });
+    
+    try {
+      await Promise.race([fetchPromise, timeoutPromise]);
+    } catch (error) {
+      console.error('About Me generation failed:', error);
+      // Continue even if About Me generation fails
+      setProcessingProgress(100);
+      setProcessingStatus("Processing complete (About Me skipped)");
+    } finally {
+      setIsAboutMeLoading(false);
+      
+      // Show success message
+      if (huggingFaceError) {
+        toast({
+          title: "AI Generation Warning",
+          description: `Some AI-generated fields may be missing: ${huggingFaceError}`,
+          variant: "destructive",
+          duration: 6000,
+        })
+      } else {
+        toast({
+          title: "Resume processed successfully!",
+          description: "Your information has been extracted. You can review and edit it.",
+          duration: 3000,
+        })
+      }
+      
+      // Wait a moment for user to see completion, then proceed
+      setTimeout(() => {
+        setIsProcessingResume(false);
+        setProcessingProgress(0);
+        setProcessingStatus("");
+        handleNext();
+      }, 1000);
     }
-    handleNext();
   }
 
   const updatePortfolioData = (section, data) => {
@@ -377,7 +429,7 @@ export default function CreatePortfolioPage() {
                   </div>
                   <h3 className="text-xl font-semibold mb-2">Upload Resume</h3>
                   <p className="text-gray-600 mb-4">
-                    Upload your resume and we'll automatically extract all your information using AI
+                    Upload your resume and we&apos;ll automatically extract all your information using AI
                   </p>
                   <div className="space-y-2 text-sm text-gray-500">
                     <div className="flex items-center justify-center">
@@ -428,10 +480,14 @@ export default function CreatePortfolioPage() {
           return (
             <ResumeUploadSection
               onResumeProcessed={handleResumeProcessed}
+              onProcessingError={handleResumeProcessingError}
               portfolioData={portfolioData}
               updatePortfolioData={updatePortfolioData}
               autoOpenFilePicker={autoOpenFilePicker}
               setAutoOpenFilePicker={setAutoOpenFilePicker}
+              isProcessingResume={isProcessingResume}
+              processingProgress={processingProgress}
+              processingStatus={processingStatus}
             />
           )
         } else {
@@ -588,17 +644,28 @@ export default function CreatePortfolioPage() {
           {/* Navigation */}
           {step > 1 && (
             <div className="flex justify-between p-6 border-t">
-              <Button variant="outline" onClick={handlePrevious}>
+              <Button 
+                variant="outline" 
+                onClick={handlePrevious}
+                disabled={isProcessingResume}
+              >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Previous
               </Button>
               {step < steps.length ? (
-                <Button onClick={handleNext}>
+                <Button 
+                  onClick={handleNext}
+                  disabled={isProcessingResume}
+                >
                   Next
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               ) : (
-                <Button onClick={handleSubmit} className="bg-green-600 hover:bg-green-700">
+                <Button 
+                  onClick={handleSubmit} 
+                  className="bg-green-600 hover:bg-green-700"
+                  disabled={isProcessingResume}
+                >
                   Save Portfolio
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
