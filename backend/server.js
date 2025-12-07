@@ -79,10 +79,16 @@ app.use("/api/payment", paymentRoutes);
 app.use("/api/subscription", subscriptionRoutes);
 app.use("/api/user", userRoutes); // includes /me/subscription
 
-// ✅ 4. Connect to MongoDB
+// ✅ 4. Connect to MongoDB with optimized connection pooling
 mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("Connected to MongoDB"))
+  .connect(process.env.MONGO_URI, {
+    maxPoolSize: 10, // Maximum number of connections in the pool
+    minPoolSize: 2,  // Minimum number of connections in the pool
+    socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+    serverSelectionTimeoutMS: 5000, // Timeout for selecting a server
+    family: 4 // Use IPv4, skip trying IPv6
+  })
+  .then(() => console.log("Connected to MongoDB with connection pooling"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
 // ✅ 5. Start server
