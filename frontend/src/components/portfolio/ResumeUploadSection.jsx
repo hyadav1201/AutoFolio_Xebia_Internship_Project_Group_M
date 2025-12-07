@@ -2,7 +2,6 @@
 
 import { useRef, useState } from "react"
 import { Button } from "../ui/button"
-import { Label } from "../ui/label"
 import { Card, CardContent } from "../ui/card"
 import { Upload, FileText, CheckCircle, Loader2, AlertCircle } from "lucide-react"
 import { API_ENDPOINTS } from "../../config/api"
@@ -13,7 +12,6 @@ export function ResumeUploadSection({ onResumeProcessed }) {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState("")
   const [uploadedFilePath, setUploadedFilePath] = useState("")
-  const [currentFile, setCurrentFile] = useState(null)
 
   const handleFileChange = async (e) => {
     setUploadError("")
@@ -32,7 +30,6 @@ export function ResumeUploadSection({ onResumeProcessed }) {
       return
     }
     
-    setCurrentFile(file)
     setIsUploading(true)
     
     try {
@@ -144,7 +141,7 @@ export function ResumeUploadSection({ onResumeProcessed }) {
           </div>
           <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm text-blue-800">
-              <strong>Note:</strong> We'll automatically extract your information from the resume. 
+              <strong>Note:</strong> We&apos;ll automatically extract your information from the resume. 
               If extraction fails, you can still enter your information manually in the next steps.
             </p>
           </div>
