@@ -126,7 +126,7 @@ export function parseResumeText(text) {
 
   // Extract skills (common technical skills)
   const skillKeywords = [
-    'javascript', 'java', 'python', 'c++', 'c#', 'ruby', 'php', 'swift', 'kotlin',
+    'javascript', 'java', 'python', 'c\\+\\+', 'c#', 'ruby', 'php', 'swift', 'kotlin',
     'typescript', 'golang', 'rust', 'scala', 'react', 'angular', 'vue', 'node',
     'express', 'django', 'flask', 'spring', 'asp.net', 'laravel', 'mongodb',
     'postgresql', 'mysql', 'redis', 'docker', 'kubernetes', 'aws', 'azure', 'gcp',
@@ -139,10 +139,12 @@ export function parseResumeText(text) {
   const foundSkills = [];
   
   skillKeywords.forEach(skill => {
+    // Skill is already escaped if needed (e.g., c\\+\\+ for C++)
     const regex = new RegExp(`\\b${skill}\\b`, 'gi');
     if (textLower.match(regex)) {
-      // Capitalize first letter
-      foundSkills.push(skill.charAt(0).toUpperCase() + skill.slice(1));
+      // Capitalize first letter and unescape for display
+      const displayName = skill.replace(/\\(.)/g, '$1');
+      foundSkills.push(displayName.charAt(0).toUpperCase() + displayName.slice(1));
     }
   });
   
