@@ -253,14 +253,29 @@ export default function CreatePortfolioPage() {
     
     // Extract social media URLs from websites array
     const websites = Array.isArray(extractedData.websites) ? extractedData.websites : [];
+    
+    // Extract and cache URL findings to avoid repeated iterations
+    const linkedinUrl = extractedData.linkedin || 
+      websites.find(url => url && url.includes('linkedin.com')) || '';
+    const githubUrl = extractedData.github || 
+      websites.find(url => url && url.includes('github.com')) || '';
     const twitterUrl = extractedData.twitter || 
       websites.find(url => url && (url.includes('twitter.com') || url.includes('x.com'))) || '';
+    // Match blog URLs more specifically to avoid false positives
     const blogUrl = extractedData.blog || 
-      websites.find(url => url && (url.includes('medium.com') || url.includes('dev.to') || url.includes('blog'))) || '';
+      websites.find(url => url && (
+        url.includes('medium.com') || 
+        url.includes('dev.to') || 
+        url.includes('hashnode') ||
+        url.match(/\/(blog|posts?)\b/i)
+      )) || '';
     const whatsappUrl = extractedData.whatsapp || 
       websites.find(url => url && url.includes('wa.me')) || '';
     const telegramUrl = extractedData.telegram || 
       websites.find(url => url && url.includes('t.me')) || '';
+    
+    // Process projects once and reuse
+    const extractedProjects = mapProjects(extractedData);
     
     setPortfolioData((prev) => ({
       ...prev,
@@ -270,14 +285,8 @@ export default function CreatePortfolioPage() {
       shortBio: shortBio || prev.shortBio,
       email: extractedData.emails?.[0] || extractedData.email || prev.email,
       phone: extractedData.phoneNumbers?.[0] || extractedData.phone || prev.phone,
-      linkedinUrl:
-        extractedData.linkedin ||
-        websites.find(url => url && url.includes('linkedin.com')) ||
-        prev.linkedinUrl,
-      githubUrl:
-        extractedData.github ||
-        websites.find(url => url && url.includes('github.com')) ||
-        prev.githubUrl,
+      linkedinUrl: linkedinUrl || prev.linkedinUrl,
+      githubUrl: githubUrl || prev.githubUrl,
       twitterUrl: twitterUrl || prev.twitterUrl,
       blogUrl: blogUrl || prev.blogUrl,
       whatsappUrl: whatsappUrl || prev.whatsappUrl,
@@ -304,7 +313,7 @@ export default function CreatePortfolioPage() {
           : prev.technicalSkills,
       softSkills: extractedData.softSkills || prev.softSkills,
       toolsAndTech: extractedData.toolsAndTech || prev.toolsAndTech,
-      projects: mapProjects(extractedData),
+      projects: extractedProjects,
       awards: extractedData.awards || prev.awards,
       certifications: mapCertifications(extractedData.certifications),
       careerGoals: extractedData.careerGoals || prev.careerGoals,
@@ -317,8 +326,8 @@ export default function CreatePortfolioPage() {
         ...(shortBio ? ['shortBio'] : []),
         ...(extractedData.emails?.[0] || extractedData.email ? ['email'] : []),
         ...(extractedData.phoneNumbers?.[0] || extractedData.phone ? ['phone'] : []),
-        ...(extractedData.linkedin || websites.find(url => url && url.includes('linkedin.com')) ? ['linkedinUrl'] : []),
-        ...(extractedData.github || websites.find(url => url && url.includes('github.com')) ? ['githubUrl'] : []),
+        ...(linkedinUrl ? ['linkedinUrl'] : []),
+        ...(githubUrl ? ['githubUrl'] : []),
         ...(twitterUrl ? ['twitterUrl'] : []),
         ...(blogUrl ? ['blogUrl'] : []),
         ...(whatsappUrl ? ['whatsappUrl'] : []),
@@ -328,7 +337,7 @@ export default function CreatePortfolioPage() {
         ...(Array.isArray(extractedData.skills) && extractedData.skills.length > 0 ? ['technicalSkills'] : []),
         ...(extractedData.softSkills ? ['softSkills'] : []),
         ...(extractedData.toolsAndTech ? ['toolsAndTech'] : []),
-        ...(mapProjects(extractedData).length > 0 ? ['projects'] : []),
+        ...(extractedProjects.length > 0 ? ['projects'] : []),
         ...(extractedData.awards ? ['awards'] : []),
         ...(extractedData.certifications ? ['certifications'] : []),
         ...(extractedData.careerGoals ? ['careerGoals'] : []),
