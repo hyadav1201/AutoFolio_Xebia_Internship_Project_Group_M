@@ -125,24 +125,73 @@ export function parseResumeText(text) {
   }
 
   // Extract skills (common technical skills)
+  // Define skills with proper regex escaping for special characters
   const skillKeywords = [
-    'javascript', 'java', 'python', 'c++', 'c#', 'ruby', 'php', 'swift', 'kotlin',
-    'typescript', 'golang', 'rust', 'scala', 'react', 'angular', 'vue', 'node',
-    'express', 'django', 'flask', 'spring', 'asp.net', 'laravel', 'mongodb',
-    'postgresql', 'mysql', 'redis', 'docker', 'kubernetes', 'aws', 'azure', 'gcp',
-    'git', 'html', 'css', 'sass', 'webpack', 'graphql', 'rest', 'api', 'agile',
-    'scrum', 'jira', 'jenkins', 'ci/cd', 'tensorflow', 'pytorch', 'machine learning',
-    'deep learning', 'data science', 'analytics', 'sql', 'nosql', 'linux', 'windows'
+    { pattern: 'javascript', display: 'JavaScript' },
+    { pattern: 'java', display: 'Java' },
+    { pattern: 'python', display: 'Python' },
+    { pattern: 'c\\+\\+', display: 'C++' },
+    { pattern: 'c#', display: 'C#' },
+    { pattern: 'ruby', display: 'Ruby' },
+    { pattern: 'php', display: 'PHP' },
+    { pattern: 'swift', display: 'Swift' },
+    { pattern: 'kotlin', display: 'Kotlin' },
+    { pattern: 'typescript', display: 'TypeScript' },
+    { pattern: 'golang', display: 'Golang' },
+    { pattern: 'rust', display: 'Rust' },
+    { pattern: 'scala', display: 'Scala' },
+    { pattern: 'react', display: 'React' },
+    { pattern: 'angular', display: 'Angular' },
+    { pattern: 'vue', display: 'Vue' },
+    { pattern: 'node', display: 'Node' },
+    { pattern: 'express', display: 'Express' },
+    { pattern: 'django', display: 'Django' },
+    { pattern: 'flask', display: 'Flask' },
+    { pattern: 'spring', display: 'Spring' },
+    { pattern: 'asp\\.net', display: 'ASP.NET' },
+    { pattern: 'laravel', display: 'Laravel' },
+    { pattern: 'mongodb', display: 'MongoDB' },
+    { pattern: 'postgresql', display: 'PostgreSQL' },
+    { pattern: 'mysql', display: 'MySQL' },
+    { pattern: 'redis', display: 'Redis' },
+    { pattern: 'docker', display: 'Docker' },
+    { pattern: 'kubernetes', display: 'Kubernetes' },
+    { pattern: 'aws', display: 'AWS' },
+    { pattern: 'azure', display: 'Azure' },
+    { pattern: 'gcp', display: 'GCP' },
+    { pattern: 'git', display: 'Git' },
+    { pattern: 'html', display: 'HTML' },
+    { pattern: 'css', display: 'CSS' },
+    { pattern: 'sass', display: 'Sass' },
+    { pattern: 'webpack', display: 'Webpack' },
+    { pattern: 'graphql', display: 'GraphQL' },
+    { pattern: 'rest', display: 'REST' },
+    { pattern: 'api', display: 'API' },
+    { pattern: 'agile', display: 'Agile' },
+    { pattern: 'scrum', display: 'Scrum' },
+    { pattern: 'jira', display: 'Jira' },
+    { pattern: 'jenkins', display: 'Jenkins' },
+    { pattern: 'ci/cd', display: 'CI/CD' },
+    { pattern: 'tensorflow', display: 'TensorFlow' },
+    { pattern: 'pytorch', display: 'PyTorch' },
+    { pattern: 'machine learning', display: 'Machine Learning' },
+    { pattern: 'deep learning', display: 'Deep Learning' },
+    { pattern: 'data science', display: 'Data Science' },
+    { pattern: 'analytics', display: 'Analytics' },
+    { pattern: 'sql', display: 'SQL' },
+    { pattern: 'nosql', display: 'NoSQL' },
+    { pattern: 'linux', display: 'Linux' },
+    { pattern: 'windows', display: 'Windows' },
   ];
   
   const textLower = text.toLowerCase();
   const foundSkills = [];
   
   skillKeywords.forEach(skill => {
-    const regex = new RegExp(`\\b${skill}\\b`, 'gi');
+    // Pattern is pre-escaped for regex special characters
+    const regex = new RegExp(`\\b${skill.pattern}\\b`, 'gi');
     if (textLower.match(regex)) {
-      // Capitalize first letter
-      foundSkills.push(skill.charAt(0).toUpperCase() + skill.slice(1));
+      foundSkills.push(skill.display);
     }
   });
   
