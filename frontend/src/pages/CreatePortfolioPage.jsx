@@ -200,9 +200,9 @@ export default function CreatePortfolioPage() {
           // Try to extract name, tech, and description
           const nameMatch = line.match(/^[^\n]+/);
           const name = nameMatch ? nameMatch[0].split('\n')[0] : '';
-          // Try to extract tech stack (comma or | separated)
-          const techMatch = line.match(/([A-Za-z0-9\-. ]+,? ?)+(?=\n|\|)/);
-          const tech = techMatch ? techMatch[0].split(/,|\|/).map(t => t.trim()).filter(Boolean) : [];
+          // Try to extract tech stack (comma or | separated) - simplified regex to avoid ReDoS
+          const techMatch = line.match(/[A-Za-z0-9\-., ]+(?=\n|\|)/);
+          const tech = techMatch ? techMatch[0].split(/[,|]/).map(t => t.trim()).filter(Boolean) : [];
           // Description: everything after the first line
           const desc = line.split('\n').slice(1).join(' ').trim();
           return { name, tech, description: desc };
